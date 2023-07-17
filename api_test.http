@@ -1,0 +1,15 @@
+###
+
+ Get http://127.0.0.1:8081/api/v1/info
+ Content-Type: application/json
+
+###
+
+ Get http://127.0.0.1:8081/api/v1/health
+ Content-Type: application/json
+
+
+# ####
+# Get http://127.0.0.1:8081/api/v1/profile
+# Content-Type: application/json
+# Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI2OTI2MGJkNC0xZDcwLTQ1YjQtOWNjMi0yZjNkNzZhNmU1YTciLCJuYW1lIjoiU2FkZWdoIiwiZW1haWwiOiIxMDMyNDk1NzU1NDg2NTg1MjA1ODkiLCJpYXQiOjE2ODk1ODI2MTcsImV4cCI6MTY5MDQ0NzIxN30.9O81Tvhz2hcRFKPy0KpF2O68BeJwcQQRKCo2xWgL9Xs
