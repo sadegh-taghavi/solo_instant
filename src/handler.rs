@@ -1,6 +1,10 @@
 use serde::Serialize;
-use actix_web::{Responder, web, HttpResponse};
+use actix_web::{Responder, web, HttpResponse, HttpRequest};
+use actix_web_actors::ws;
+use actix::prelude::*;
 use chrono::prelude::Utc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 pub async fn health() -> impl Responder {
     #[derive(Debug, Serialize)]
@@ -28,19 +32,47 @@ pub async fn info() -> impl Responder {
     })
 }
 
-// pub async fn get_profile(app_state: web::Data<crate::server::AppState>, claims: crate::model::TokenClaims) -> impl Responder {  
+impl Actor for WebSocketConnection {
+    type Context = ws::WebsocketContext<Self>;
 
-//     let result = crate::service::get_profile(&app_state, &claims)
-//     .await;
+    fn started(&mut self, ctx: &mut Self::Context) {
+        info!("WebSocket connection established");
+        self.connections.lock().unwrap().insert(self.claims.sub.clone(), ctx.address());
+    }
+    fn stopped(&mut self, _ctx: &mut Self::Context) {
+        self.connections.lock().unwrap().remove(&self.claims.sub.clone());
+    }
+}
 
-//     if result.is_err() {
+impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebSocketConnection {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
+        match msg {
+            Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
+            Ok(ws::Message::Text(text)) => {
+                info!("Received text message: {}", text);
+                ctx.text(format!("You sent: {}", text));
+            }
+            Ok(ws::Message::Binary(bin)) => {
+                info!("Received binary message: {:?}", bin);
+                ctx.binary(bin);
+            }
+            _ => (),
+        }
+    }
+}
 
-//         match result.as_ref().err().unwrap().status.as_str() {
-//             "400" => return HttpResponse::BadRequest().json(result.as_ref().err().unwrap()),
-//             "500" => return HttpResponse::InternalServerError().json(result.as_ref().err().unwrap()),
-//             _ => return HttpResponse::InternalServerError().json(result.as_ref().err().unwrap())
-//         }
-//     }
-//     HttpResponse::Ok().json(result.as_ref().ok().unwrap())
+pub struct WebSocketConnection {
+    connections: Arc<Mutex<HashMap<String, Addr<WebSocketConnection>>>>,
+    claims: crate::model::TokenClaims
+}
 
-// }
+impl WebSocketConnection {
+    fn new(connections: Arc<Mutex<HashMap<String, Addr<WebSocketConnection>>>>, claims: crate::model::TokenClaims) -> Self {
+        WebSocketConnection { connections, claims }
+    }
+}
+
+pub async fn websocket_index(r: HttpRequest,stream: web::Payload,app_state: web::Data<crate::server::AppState>, claims: crate::model::TokenClaims) -> Result<HttpResponse, actix_web::Error> {
+    let res = ws::start(WebSocketConnection::new(app_state.connections.clone(), claims), &r, stream);
+    res
+}
