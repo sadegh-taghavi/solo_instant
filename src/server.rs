@@ -40,7 +40,7 @@ pub async fn init(conf : super::config::Config) -> std::io::Result<()> {
         .app_data(app_state.clone())
         .route("/api/v1/health", web::get().to(handler::health))
         .route("/api/v1/info", web::get().to(handler::info))
-        .route("/ws/", web::get().to(handler::websocket_index))
+        .route("/api/v1/ws", web::get().to(handler::websocket_index))
     })
     .bind(conf.server.address)?
     .run()
